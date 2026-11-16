@@ -1,0 +1,52 @@
+theory SecureDropEpoch
+begin
+
+builtins: natural-numbers
+
+// Attacker definition?
+
+// create an epoch
+rule Init_Epoch:
+    [ ]
+    --[ EpochInit(%1), OnlyOnce() ]->
+    [ Out(%1), !EpochState(%1) ]
+
+// does the OnlyOnce() apply to the whole rule, or the rule with the conditions?
+rule Next_Epoch:
+    [ !EpochState(%e) ]
+    --[ EpochIncrement(%e), OnlyOnce() ]->
+    [ !EpochState(%e %+ %1), Out(%e %+ %1) ]
+
+restriction Eq:
+    "All x y #i. Eq(x,y) @i ==> x = y"
+
+/* Alice sends a message with the current epoch */
+rule Alice_Send:
+    [ !EpochState(%e), Fr(~m) ]
+    --[ Sent(%e, ~m) ]->
+    [ Out(<%e, ~m>) ]
+
+/* Bob receives the message and checks the epoch, accepts if it is current */
+rule Bob_Recv:
+  [ !EpochState(%ep), In(<%e, m>) ]
+  --[ BobAccepted(%e, m), Eq(%ep, %e) ]->
+  [ ]
+
+// #i is i:temporal
+
+// lemmas
+/* If Bob accepts the message, then the epoch must be current */
+// TODO: nothing binds the fact that alice sent the epoch message
+// the attacker can just create a message with the valid epoch too
+lemma AcceptedAtEpoch:
+    "All e_sent e_recv m #s #a.
+        Sent(e_sent, m) @ s & BobAccepted(e_recv, m) @ a
+    ==> e_sent = e_recv"
+
+/* Exists e, m s.t. Alice sent m with ep and bob accepts e, m */
+lemma Executability:
+  exists-trace
+  "Ex e m #s #a. Sent(e, m) @ s & BobAccepted(e, m) @ a"
+
+
+end
