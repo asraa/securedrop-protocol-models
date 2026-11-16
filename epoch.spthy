@@ -14,7 +14,7 @@ rule Init_Epoch:
 // does the OnlyOnce() apply to the whole rule, or the rule with the conditions?
 rule Next_Epoch:
     [ !EpochState(%e) ]
-    --[ EpochIncrement(%e), OnlyOnce() ]->
+    --[ EpochIncrement(%e), EpochEnd(%e) ]->
     [ !EpochState(%e %+ %1), Out(%e %+ %1) ]
 
 restriction Eq:
@@ -42,6 +42,14 @@ lemma AcceptedAtEpoch:
     "All e_sent e_recv m #s #a.
         Sent(e_sent, m) @ s & BobAccepted(e_recv, m) @ a
     ==> e_sent = e_recv"
+
+/* Bob doesn't accept a message with an old epoch */
+// If Bob accepts a message at epoch a, and the epoch ended at s
+// then bob accepted before it ended
+lemma NoOldEpochAccepted:
+    "All e_accept m #s #a.
+        BobAccepted(e_accept, m) @ a & EpochEnd(e_accept) @ s 
+    ==> a < s"
 
 /* Exists e, m s.t. Alice sent m with ep and bob accepts e, m */
 lemma Executability:
